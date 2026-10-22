@@ -16,6 +16,49 @@ def test_health_and_auth(client):
     assert response.json()["role"] == "admin"
 
 
+def test_dashboard_analytics_is_role_scoped_and_has_local_period(client):
+    admin_response = client.get(
+        "/api/v1/dashboard/analytics?days=7", headers=login(client, "admin@confianza.demo")
+    )
+    assert admin_response.status_code == 200, admin_response.text
+    admin_data = admin_response.json()
+    assert admin_data["scope"] == "global"
+    assert admin_data["period"]["days"] == 7
+    assert admin_data["period"]["timezone"] == "America/Bogota"
+    assert len(admin_data["trend"]) == 7
+    assert admin_data["summary"]["attendance_rate"] is None
+
+    patient_response = client.get(
+        "/api/v1/dashboard/analytics?days=7", headers=login(client, "patient@confianza.demo")
+    )
+    assert patient_response.status_code == 200, patient_response.text
+    patient_data = patient_response.json()
+    assert patient_data["scope"] == "patient"
+    assert patient_data["summary"]["active_patients"] is None
+
+
+def test_dashboard_analytics_rejects_invalid_period(client):
+    response = client.get(
+        "/api/v1/dashboard/analytics?days=6", headers=login(client, "admin@confianza.demo")
+    )
+    assert response.status_code == 422
+
+
+def test_authenticated_user_can_update_profile_name_and_audit(client):
+    patient_headers = login(client, "patient@confianza.demo")
+    response = client.patch(
+        "/api/v1/auth/me", json={"full_name": "Ana Perfil Actualizado"}, headers=patient_headers
+    )
+    assert response.status_code == 200, response.text
+    assert response.json()["full_name"] == "Ana Perfil Actualizado"
+
+    audit_response = client.get("/api/v1/audit", headers=login(client, "admin@confianza.demo"))
+    assert any(
+        event["resource_type"] == "user" and event["action"] == "update"
+        for event in audit_response.json()
+    )
+
+
 def test_login_returns_503_when_database_is_not_ready(client):
     class BrokenAuthenticationService:
         def login(self, email: str, password: str):
