@@ -4,16 +4,39 @@ from sqlalchemy.orm import Session
 
 from ..audit import record_audit
 from ..db import get_db
-from ..models import Patient, Role, User
+from ..models import Appointment, Patient, Role, User
 from ..schemas import PatientCreate, PatientResponse, PatientUpdate
 from ..security import CurrentUser, require_roles
 
 router = APIRouter(prefix="/patients", tags=["Pacientes"])
 staff = require_roles(Role.ADMIN, Role.RECEPTIONIST)
+patient_reader = require_roles(Role.ADMIN, Role.RECEPTIONIST, Role.DOCTOR)
 
 
-def _patient_query(db: Session, search: str | None, active: bool | None):
+def _doctor_can_access_patient(db: Session, user: User, patient_id: int) -> bool:
+    if user.role != Role.DOCTOR or user.doctor_id is None:
+        return user.role != Role.DOCTOR
+    return (
+        db.scalar(
+            select(Appointment.id)
+            .where(
+                Appointment.patient_id == patient_id,
+                Appointment.doctor_id == user.doctor_id,
+            )
+            .limit(1)
+        )
+        is not None
+    )
+
+
+def _patient_query(db: Session, user: User, search: str | None, active: bool | None):
     query = select(Patient).order_by(Patient.last_name, Patient.first_name)
+    if user.role == Role.DOCTOR:
+        query = (
+            query.join(Appointment, Appointment.patient_id == Patient.id)
+            .where(Appointment.doctor_id == user.doctor_id)
+            .distinct()
+        )
     if active is not None:
         query = query.where(Patient.active == active)
     if search:
@@ -30,12 +53,12 @@ def _patient_query(db: Session, search: str | None, active: bool | None):
 
 @router.get("", response_model=list[PatientResponse])
 def list_patients(
-    _: User = Depends(staff),
+    user: User = Depends(patient_reader),
     db: Session = Depends(get_db),
     search: str | None = Query(default=None, max_length=80),
     active: bool | None = None,
 ) -> list[Patient]:
-    return list(db.scalars(_patient_query(db, search, active)).all())
+    return list(db.scalars(_patient_query(db, user, search, active)).all())
 
 
 @router.post("", response_model=PatientResponse, status_code=status.HTTP_201_CREATED)
@@ -92,6 +115,8 @@ def update_my_patient(
 @router.get("/{patient_id}", response_model=PatientResponse)
 def get_patient(patient_id: int, user: CurrentUser, db: Session = Depends(get_db)) -> Patient:
     if user.role == Role.PATIENT and user.patient_id != patient_id:
+        raise HTTPException(status_code=403, detail="No puede consultar este paciente")
+    if user.role == Role.DOCTOR and not _doctor_can_access_patient(db, user, patient_id):
         raise HTTPException(status_code=403, detail="No puede consultar este paciente")
     patient = db.get(Patient, patient_id)
     if not patient:
