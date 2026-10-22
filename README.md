@@ -47,6 +47,16 @@ La especificación OpenAPI generada por FastAPI es la fuente de verdad para el f
 
 Las migraciones se ejecutan explícitamente antes de publicar. No se ejecutan automáticamente durante una request de Vercel. `DATABASE_URL` debe apuntar al endpoint pooled de Neon para la aplicación y `DATABASE_URL_UNPOOLED` queda reservado para tareas administrativas o migraciones.
 
+En el proyecto backend de Vercel, `CORS_ORIGINS` debe contener los orígenes completos separados por coma. Para la demo actual:
+
+```text
+http://localhost:5173,https://confianza-ips-frontend.vercel.app
+```
+
+El frontend desplegado no puede usar `http://localhost:8000`: en el navegador del usuario esa dirección apunta a su propio equipo y los navegadores bloquean el acceso desde un sitio HTTPS. En el proyecto frontend de Vercel configura `VITE_API_BASE_URL` con la URL pública del backend, por ejemplo `https://confianza-ips-backend.vercel.app/api/v1`. Como Vite incrusta las variables `VITE_*` durante el build, cada cambio requiere un nuevo despliegue.
+
+Después de actualizar ambas variables, valida `GET /health` y una petición OPTIONS a `/api/v1/auth/login` desde el dominio frontend antes de probar el login.
+
 Para resolver una base Neon recién creada, ejecuta desde el repositorio backend con las variables del entorno administrativo:
 
 ```bash
