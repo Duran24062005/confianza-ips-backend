@@ -65,3 +65,8 @@ uv run python scripts/seed.py
 ```
 
 No ejecutes el seed contra una base con datos reales.
+## Capacidades de demostración
+
+Además del dashboard operativo existente, la API expone `GET /api/v1/dashboard/analytics?days=7|30|90` para construir tendencias y distribuciones desde citas persistidas. El resultado aplica alcance por rol y agrupa los días en `America/Bogota`.
+
+El perfil autenticado puede actualizar su nombre visible con `PATCH /api/v1/auth/me`. La operación registra auditoría; los datos administrativos del paciente continúan en `/api/v1/patients/me`.

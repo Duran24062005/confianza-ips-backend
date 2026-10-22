@@ -1,6 +1,6 @@
 from datetime import date, datetime, time
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 from .domain.types import AppointmentStatus, Role
 
@@ -37,6 +37,18 @@ class UserCreate(BaseModel):
     role: Role
     patient_id: int | None = None
     doctor_id: int | None = None
+
+
+class UserUpdate(BaseModel):
+    full_name: str = Field(min_length=2, max_length=160)
+
+    @field_validator("full_name")
+    @classmethod
+    def normalize_name(cls, value: str) -> str:
+        normalized = " ".join(value.split())
+        if len(normalized) < 2:
+            raise ValueError("El nombre debe tener al menos 2 caracteres")
+        return normalized
 
 
 class PatientCreate(BaseModel):
@@ -266,3 +278,53 @@ class DashboardResponse(BaseModel):
     confirmed_appointments: int
     cancelled_appointments: int
     upcoming_appointments: int
+
+
+class DashboardPeriod(BaseModel):
+    days: int
+    start: datetime
+    end: datetime
+    timezone: str
+
+
+class DashboardSummary(BaseModel):
+    active_patients: int | None
+    active_doctors: int | None
+    appointments_today: int
+    upcoming_appointments: int
+    pending_appointments: int
+    confirmed_appointments: int
+    completed_appointments: int
+    cancelled_appointments: int
+    no_show_appointments: int
+    attendance_rate: float | None
+
+
+class DashboardTrendPoint(BaseModel):
+    date: date
+    total: int
+    requested: int
+    confirmed: int
+    completed: int
+    cancelled: int
+    no_show: int
+
+
+class DashboardBreakdown(BaseModel):
+    status: AppointmentStatus
+    count: int
+
+
+class DashboardServiceBreakdown(BaseModel):
+    service_id: int
+    service_name: str
+    count: int
+
+
+class DashboardAnalyticsResponse(BaseModel):
+    scope: str
+    period: DashboardPeriod
+    summary: DashboardSummary
+    trend: list[DashboardTrendPoint]
+    status_breakdown: list[DashboardBreakdown]
+    service_breakdown: list[DashboardServiceBreakdown]

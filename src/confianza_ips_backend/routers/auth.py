@@ -1,8 +1,11 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
+from sqlalchemy.orm import Session
 
 from ..api.dependencies import AuthenticationServiceDependency
+from ..audit import record_audit
+from ..db import get_db
 from ..models import User
-from ..schemas import LoginRequest, TokenResponse, UserResponse
+from ..schemas import LoginRequest, TokenResponse, UserResponse, UserUpdate
 from ..security import CurrentUser
 
 router = APIRouter(prefix="/auth", tags=["Autenticación"])
@@ -19,6 +22,18 @@ def login(
 
 @router.get("/me", response_model=UserResponse)
 def me(user: CurrentUser) -> User:
+    return user
+
+
+@router.patch("/me", response_model=UserResponse)
+def update_me(
+    payload: UserUpdate, user: CurrentUser, db: Session = Depends(get_db)
+) -> User:
+    before = {"full_name": user.full_name}
+    user.full_name = payload.full_name.strip()
+    record_audit(db, user, "update", "user", user.id, before=before, after={"full_name": user.full_name})
+    db.commit()
+    db.refresh(user)
     return user
 
 
