@@ -2,13 +2,35 @@ from datetime import datetime, timedelta, timezone
 
 from conftest import login
 
+from confianza_ips_backend.api.dependencies import get_authentication_service
+from confianza_ips_backend.application.exceptions import DatabaseNotReadyError
+from confianza_ips_backend.main import app
+
 
 def test_health_and_auth(client):
     assert client.get("/health").json()["status"] == "ok"
+    assert client.get("/health/ready").json()["status"] == "ready"
     headers = login(client, "admin@confianza.demo")
     response = client.get("/api/v1/auth/me", headers=headers)
     assert response.status_code == 200
     assert response.json()["role"] == "admin"
+
+
+def test_login_returns_503_when_database_is_not_ready(client):
+    class BrokenAuthenticationService:
+        def login(self, email: str, password: str):
+            raise DatabaseNotReadyError
+
+    app.dependency_overrides[get_authentication_service] = lambda: BrokenAuthenticationService()
+    try:
+        response = client.post(
+            "/api/v1/auth/login",
+            json={"email": "admin@confianza.demo", "password": "Password123!"},
+        )
+    finally:
+        app.dependency_overrides.pop(get_authentication_service, None)
+    assert response.status_code == 503
+    assert response.json()["code"] == "DATABASE_NOT_READY"
 
 
 def test_patient_can_only_read_own_profile(client):
