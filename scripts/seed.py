@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 from datetime import UTC, date, datetime, time, timedelta
+from zoneinfo import ZoneInfo
 
 from sqlalchemy import select
 
@@ -25,6 +26,78 @@ from confianza_ips_backend.models import (
     User,
 )
 from confianza_ips_backend.security import hash_password
+
+DEMO_PASSWORD = "Confianza123!"
+BUSINESS_TZ = ZoneInfo("America/Bogota")
+
+
+def demo_appointment_specs(
+    today: date, patients: list[Patient], doctors: list[Doctor], services: dict[str, Service]
+) -> tuple[tuple[Patient, Doctor, Service, datetime, AppointmentStatus, str], ...]:
+    """Build a deterministic, varied appointment timeline around the seed date."""
+
+    def local_start(day_offset: int, hour: int) -> datetime:
+        local_date = today + timedelta(days=day_offset)
+        return datetime.combine(local_date, time(hour), tzinfo=BUSINESS_TZ).astimezone(UTC)
+
+    return (
+        (
+            patients[0],
+            doctors[0],
+            services["Consulta general"],
+            local_start(-1, 9),
+            AppointmentStatus.COMPLETED,
+            "Control preventivo",
+        ),
+        (
+            patients[1],
+            doctors[1],
+            services["Consulta pediátrica"],
+            local_start(-3, 10),
+            AppointmentStatus.NO_SHOW,
+            "Seguimiento de crecimiento",
+        ),
+        (
+            patients[0],
+            doctors[0],
+            services["Consulta general"],
+            local_start(-6, 11),
+            AppointmentStatus.CANCELLED,
+            "Cambio de disponibilidad",
+        ),
+        (
+            patients[1],
+            doctors[1],
+            services["Consulta pediátrica"],
+            local_start(-10, 8),
+            AppointmentStatus.COMPLETED,
+            "Valoración de seguimiento",
+        ),
+        (
+            patients[0],
+            doctors[1],
+            services["Consulta pediátrica"],
+            local_start(-15, 14),
+            AppointmentStatus.CONFIRMED,
+            "Consulta de control",
+        ),
+        (
+            patients[1],
+            doctors[0],
+            services["Consulta general"],
+            local_start(1, 9),
+            AppointmentStatus.REQUESTED,
+            "Solicitud de nueva cita",
+        ),
+        (
+            patients[0],
+            doctors[0],
+            services["Consulta general"],
+            local_start(3, 15),
+            AppointmentStatus.CONFIRMED,
+            "Control preventivo futuro",
+        ),
+    )
 
 
 def seed(create_schema: bool = False) -> None:
@@ -178,7 +251,7 @@ def seed(create_schema: bool = False) -> None:
                     User(
                         email=email,
                         full_name=full_name,
-                        password_hash=hash_password("Confianza123!"),
+                        password_hash=hash_password(DEMO_PASSWORD),
                         role=role,
                         patient_id=patient_id,
                         doctor_id=doctor_id,
@@ -186,29 +259,8 @@ def seed(create_schema: bool = False) -> None:
                 )
         db.flush()
         admin_user = db.scalar(select(User).where(User.email == "admin@confianza.demo"))
-        today = datetime.now(UTC).date()
-        days_until_monday = (7 - today.weekday()) % 7 or 7
-        future_date = today + timedelta(days=days_until_monday)
-        future_start = datetime.combine(future_date, time(9), tzinfo=UTC)
-        past_start = future_start - timedelta(days=14)
-        demo_appointments = (
-            (
-                patients[0],
-                doctors[0],
-                services["Consulta general"],
-                future_start,
-                AppointmentStatus.CONFIRMED,
-                "Control preventivo",
-            ),
-            (
-                patients[1],
-                doctors[1],
-                services["Consulta pediátrica"],
-                past_start,
-                AppointmentStatus.COMPLETED,
-                "Seguimiento",
-            ),
-        )
+        today = datetime.now(UTC).astimezone(BUSINESS_TZ).date()
+        demo_appointments = demo_appointment_specs(today, patients, doctors, services)
         for patient, doctor, service, starts_at, appointment_status, reason in demo_appointments:
             existing = db.scalar(
                 select(Appointment).where(
@@ -257,7 +309,8 @@ def seed(create_schema: bool = False) -> None:
                         )
                     )
         db.commit()
-        print("Seed completado. Todas las cuentas demo usan la contraseña: Confianza123!")
+        print(f"Seed completado con {len(demo_appointments)} escenarios de citas.")
+        print(f"Todas las cuentas demo usan la contraseña: {DEMO_PASSWORD}")
     finally:
         db.close()
 
