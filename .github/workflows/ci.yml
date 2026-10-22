@@ -1,0 +1,56 @@
+name: Backend CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backend-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Lint, test and build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v10
+        with:
+          version: "0.12.22"
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.14"
+
+      - name: Install dependencies
+        run: uv sync --locked --group dev
+
+      - name: Check formatting
+        run: uv run ruff format --check src scripts migrations tests
+
+      - name: Run lint
+        run: uv run ruff check src scripts migrations tests
+
+      - name: Run tests
+        env:
+          APP_ENV: test
+          CORS_ORIGINS: http://localhost:5173
+          DATABASE_URL: sqlite:///./ci-test.db
+          JWT_SECRET: ci-only-secret-with-at-least-32-characters
+        run: uv run pytest -q
+
+      - name: Build package
+        run: uv build
