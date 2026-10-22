@@ -2,4 +2,3 @@ tests/
 scripts/
 docs/
 migrations/
-*.md
