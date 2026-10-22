@@ -1,26 +1,20 @@
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
+from fastapi import APIRouter
 
-from ..audit import record_audit
-from ..db import get_db
+from ..api.dependencies import AuthenticationServiceDependency
 from ..models import User
 from ..schemas import LoginRequest, TokenResponse, UserResponse
-from ..security import CurrentUser, create_access_token, verify_password
+from ..security import CurrentUser
 
 router = APIRouter(prefix="/auth", tags=["Autenticación"])
 
 
 @router.post("/login", response_model=TokenResponse)
-def login(payload: LoginRequest, db: Session = Depends(get_db)) -> TokenResponse:
-    user = db.query(User).filter(User.email == payload.email.lower()).first()
-    if not user or not user.active or not verify_password(payload.password, user.password_hash):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Credenciales inválidas"
-        )
-    token, expires_in = create_access_token(user)
-    record_audit(db, user, "login", "user", user.id)
-    db.commit()
-    return TokenResponse(access_token=token, expires_in=expires_in)
+def login(
+    payload: LoginRequest,
+    authentication: AuthenticationServiceDependency,
+) -> TokenResponse:
+    result = authentication.login(payload.email, payload.password)
+    return TokenResponse(access_token=result.access_token, expires_in=result.expires_in)
 
 
 @router.get("/me", response_model=UserResponse)
@@ -29,8 +23,9 @@ def me(user: CurrentUser) -> User:
 
 
 @router.post("/logout")
-def logout(user: CurrentUser, db: Session = Depends(get_db)) -> dict[str, str]:
-    user.session_version += 1
-    record_audit(db, user, "logout", "user", user.id)
-    db.commit()
+def logout(
+    user: CurrentUser,
+    authentication: AuthenticationServiceDependency,
+) -> dict[str, str]:
+    authentication.logout(user)
     return {"message": "Sesión cerrada"}

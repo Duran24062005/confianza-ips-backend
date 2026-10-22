@@ -1,7 +1,11 @@
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy.orm import Session
 
+from .api.exception_handlers import register_exception_handlers
 from .config import get_settings
+from .db import get_db
+from .infrastructure.persistence.readiness import assert_database_ready
 from .routers import admin as admin_router
 from .routers import (
     appointments,
@@ -24,6 +28,7 @@ app = FastAPI(
     docs_url="/docs" if settings.app_env != "production" else None,
     redoc_url="/redoc" if settings.app_env != "production" else None,
 )
+register_exception_handlers(app)
 
 app.add_middleware(
     CORSMiddleware,
@@ -37,6 +42,12 @@ app.add_middleware(
 @app.get("/health", tags=["Sistema"])
 def health() -> dict[str, str]:
     return {"status": "ok", "service": "confianza-ips-backend"}
+
+
+@app.get("/health/ready", tags=["Sistema"])
+def readiness(db: Session = Depends(get_db)) -> dict[str, str]:
+    assert_database_ready(db)
+    return {"status": "ready", "service": "confianza-ips-backend"}
 
 
 app.include_router(auth.router, prefix="/api/v1")

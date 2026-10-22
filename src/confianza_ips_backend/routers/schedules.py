@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from ..audit import record_audit
 from ..db import get_db
+from ..domain.appointment_policy import ACTIVE_APPOINTMENT_STATUSES
 from ..models import Doctor, DoctorSchedule, Role, ScheduleBlock, Service, User
 from ..schemas import AvailabilitySlot, BlockCreate, BlockResponse, ScheduleCreate, ScheduleResponse
 from ..security import CurrentUser, require_roles
@@ -15,7 +16,6 @@ router = APIRouter(tags=["Agendas"])
 admin = require_roles(Role.ADMIN)
 staff = require_roles(Role.ADMIN, Role.RECEPTIONIST)
 BUSINESS_TZ = ZoneInfo("America/Bogota")
-ACTIVE_APPOINTMENT_STATUSES = ("requested", "confirmed")
 
 
 def as_utc(value: datetime) -> datetime:

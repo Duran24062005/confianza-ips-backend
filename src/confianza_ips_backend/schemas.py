@@ -2,7 +2,7 @@ from datetime import date, datetime, time
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
-from .models import AppointmentStatus, Role
+from .domain.types import AppointmentStatus, Role
 
 
 class APIModel(BaseModel):

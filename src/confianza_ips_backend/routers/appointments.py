@@ -7,6 +7,13 @@ from sqlalchemy.orm import Session
 
 from ..audit import record_audit
 from ..db import get_db
+from ..domain.appointment_policy import (
+    can_access_appointment,
+    can_transition,
+    is_closed,
+    is_patient_within_cutoff,
+    status_value,
+)
 from ..models import (
     Appointment,
     AppointmentStatus,
@@ -31,15 +38,15 @@ from ..security import CurrentUser, require_roles
 
 router = APIRouter(prefix="/appointments", tags=["Citas"])
 staff = require_roles(Role.ADMIN, Role.RECEPTIONIST)
-ACTIVE_STATUSES = (AppointmentStatus.REQUESTED, AppointmentStatus.CONFIRMED)
-PATIENT_CUTOFF = timedelta(hours=24)
 
 
 def can_access(appointment: Appointment, user: User) -> bool:
-    return (
-        user.role in (Role.ADMIN, Role.RECEPTIONIST)
-        or (user.role == Role.PATIENT and user.patient_id == appointment.patient_id)
-        or (user.role == Role.DOCTOR and user.doctor_id == appointment.doctor_id)
+    return can_access_appointment(
+        user.role,
+        user.patient_id,
+        user.doctor_id,
+        appointment.patient_id,
+        appointment.doctor_id,
     )
 
 
@@ -178,7 +185,7 @@ def change_status(
     if (
         user.role == Role.PATIENT
         and payload.status == AppointmentStatus.CANCELLED
-        and appointment.starts_at - datetime.now(timezone.utc) < PATIENT_CUTOFF
+        and is_patient_within_cutoff(appointment.starts_at)
     ):
         raise HTTPException(
             status_code=403, detail="La cancelación debe solicitarse con 24 horas de anticipación"
@@ -188,29 +195,11 @@ def change_status(
         AppointmentStatus.NO_SHOW,
     ):
         raise HTTPException(status_code=403, detail="El médico solo puede cerrar la atención")
-    if (
-        appointment.status in (AppointmentStatus.COMPLETED, AppointmentStatus.NO_SHOW)
-        and payload.status != appointment.status
-    ):
+    if is_closed(appointment.status) and payload.status != appointment.status:
         raise HTTPException(status_code=409, detail="La cita ya fue cerrada")
-    allowed = {
-        AppointmentStatus.REQUESTED: {AppointmentStatus.CONFIRMED, AppointmentStatus.CANCELLED},
-        AppointmentStatus.CONFIRMED: {
-            AppointmentStatus.CANCELLED,
-            AppointmentStatus.COMPLETED,
-            AppointmentStatus.NO_SHOW,
-        },
-        AppointmentStatus.CANCELLED: set(),
-        AppointmentStatus.COMPLETED: set(),
-        AppointmentStatus.NO_SHOW: set(),
-    }
-    if payload.status not in allowed[AppointmentStatus(appointment.status)]:
+    if not can_transition(AppointmentStatus(appointment.status), payload.status):
         raise HTTPException(status_code=409, detail="Transición de estado no permitida")
-    before = (
-        appointment.status.value
-        if isinstance(appointment.status, AppointmentStatus)
-        else str(appointment.status)
-    )
+    before = status_value(appointment.status)
     appointment.status = payload.status
     db.add(
         AppointmentStatusHistory(
@@ -251,10 +240,7 @@ def reschedule(
         AppointmentStatus.CANCELLED,
     ):
         raise HTTPException(status_code=409, detail="La cita no puede reprogramarse")
-    if (
-        user.role == Role.PATIENT
-        and appointment.starts_at - datetime.now(timezone.utc) < PATIENT_CUTOFF
-    ):
+    if user.role == Role.PATIENT and is_patient_within_cutoff(appointment.starts_at):
         raise HTTPException(
             status_code=403, detail="El cambio debe solicitarse con 24 horas de anticipación"
         )

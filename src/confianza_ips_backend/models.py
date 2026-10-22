@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from datetime import date, datetime, time, timezone
-from enum import Enum
 
 from sqlalchemy import (
     Boolean,
@@ -17,25 +16,11 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .db import Base
+from .domain.types import AppointmentStatus, Role
 
 
 def utc_now() -> datetime:
     return datetime.now(timezone.utc)
-
-
-class Role(str, Enum):
-    ADMIN = "admin"
-    RECEPTIONIST = "receptionist"
-    DOCTOR = "doctor"
-    PATIENT = "patient"
-
-
-class AppointmentStatus(str, Enum):
-    REQUESTED = "requested"
-    CONFIRMED = "confirmed"
-    CANCELLED = "cancelled"
-    COMPLETED = "completed"
-    NO_SHOW = "no_show"
 
 
 class Institution(Base):
