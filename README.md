@@ -39,6 +39,8 @@ El seed crea cuentas ficticias con la contraseña `Confianza123!`:
 
 No utilizar estos datos en un entorno con información real.
 
+El seed es idempotente y crea una línea de tiempo sintética con citas solicitadas, confirmadas, completadas, canceladas y no asistidas. Las fechas se calculan alrededor del día de ejecución para que el dashboard de 7, 30 y 90 días tenga datos demostrables. Los registros existentes no se eliminan.
+
 ## Contrato
 
 La especificación OpenAPI generada por FastAPI es la fuente de verdad para el frontend. Los endpoints están bajo `/api/v1` y el servicio expone `/health` para smoke tests.
