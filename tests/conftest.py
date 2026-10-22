@@ -1,5 +1,6 @@
 import os
-from datetime import date, time
+from datetime import UTC, date, datetime, time, timedelta
+from zoneinfo import ZoneInfo
 
 os.environ.setdefault("DATABASE_URL", "sqlite:///./test-suite.db")
 os.environ.setdefault("JWT_SECRET", "test-secret-with-at-least-32-characters")
@@ -27,6 +28,23 @@ from confianza_ips_backend.models import (
     User,
 )
 from confianza_ips_backend.security import hash_password
+
+BUSINESS_TZ = ZoneInfo("America/Bogota")
+
+
+def future_schedule_start(days_after: int = 1) -> datetime:
+    """Return a future UTC start inside the fixture doctor's Monday/Wednesday schedule."""
+    now = datetime.now(UTC).astimezone(BUSINESS_TZ)
+    days_ahead = next(
+        offset
+        for offset in range(days_after, days_after + 8)
+        if (now + timedelta(days=offset)).weekday() in {0, 2}
+    )
+    return (
+        (now + timedelta(days=days_ahead))
+        .replace(hour=10, minute=0, second=0, microsecond=0)
+        .astimezone(UTC)
+    )
 
 
 @pytest.fixture()

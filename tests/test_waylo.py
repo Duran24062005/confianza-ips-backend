@@ -2,7 +2,7 @@ from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 
 import jwt
-from conftest import login
+from conftest import future_schedule_start, login
 
 from confianza_ips_backend.application.services.waylo import (
     current_totp,
@@ -86,7 +86,7 @@ def test_waylo_token_returns_user_and_patient_and_is_scoped(client):
 
 def test_waylo_appointments_are_limited_to_the_linked_patient(client):
     admin_headers = login(client, "admin@confianza.demo")
-    future = (datetime.now(timezone.utc) + timedelta(days=3)).isoformat()
+    future = future_schedule_start(3).isoformat()
     created = client.post(
         "/api/v1/appointments",
         json={
@@ -118,7 +118,7 @@ def test_waylo_appointments_are_limited_to_the_linked_patient(client):
             "doctor_id": client.test_ids["doctor"],
             "service_id": client.test_ids["service"],
             "site_id": client.test_ids["site"],
-            "starts_at": (datetime.now(timezone.utc) + timedelta(days=5)).isoformat(),
+            "starts_at": future_schedule_start(5).isoformat(),
         },
         headers=headers,
     )

@@ -1,6 +1,4 @@
-from datetime import datetime, timedelta, timezone
-
-from conftest import login
+from conftest import future_schedule_start, login
 
 from confianza_ips_backend.api.dependencies import get_authentication_service
 from confianza_ips_backend.application.exceptions import DatabaseNotReadyError
@@ -100,7 +98,7 @@ def test_admin_can_deactivate_patient_and_audit_it(client):
 
 def test_patient_request_is_always_scoped_to_own_patient(client):
     headers = login(client, "patient@confianza.demo")
-    future = (datetime.now(timezone.utc) + timedelta(days=3)).isoformat()
+    future = future_schedule_start(3).isoformat()
     payload = {
         "patient_id": 999,
         "doctor_id": client.test_ids["doctor"],
@@ -115,7 +113,7 @@ def test_patient_request_is_always_scoped_to_own_patient(client):
 
 def test_admin_can_create_and_cancel_appointment(client):
     headers = login(client, "admin@confianza.demo")
-    future = (datetime.now(timezone.utc) + timedelta(days=3)).isoformat()
+    future = future_schedule_start(3).isoformat()
     payload = {
         "patient_id": client.test_ids["patient"],
         "doctor_id": client.test_ids["doctor"],
@@ -141,7 +139,7 @@ def test_admin_can_create_and_cancel_appointment(client):
 
 def test_occupied_slot_returns_conflict(client):
     headers = login(client, "admin@confianza.demo")
-    future = (datetime.now(timezone.utc) + timedelta(days=3)).isoformat()
+    future = future_schedule_start(3).isoformat()
     payload = {
         "patient_id": client.test_ids["patient"],
         "doctor_id": client.test_ids["doctor"],
