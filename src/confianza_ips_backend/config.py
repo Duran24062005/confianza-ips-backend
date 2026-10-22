@@ -9,6 +9,10 @@ class Settings(BaseSettings):
     database_url_unpooled: str | None = None
     jwt_secret: str = "development-only-change-this-secret"
     jwt_expire_minutes: int = Field(default=30, ge=5, le=1440)
+    waylo_totp_secret: str = ""
+    waylo_totp_interval_seconds: int = Field(default=60, ge=30, le=3600)
+    waylo_jwt_secret: str = ""
+    waylo_token_expire_minutes: int = Field(default=15, ge=5, le=1440)
     cors_origins: str = "http://localhost:5173"
     app_env: str = "development"
     log_level: str = "INFO"

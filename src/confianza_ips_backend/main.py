@@ -17,6 +17,7 @@ from .routers import (
     patients,
     schedules,
     users,
+    waylo,
 )
 
 settings = get_settings()
@@ -60,3 +61,4 @@ app.include_router(admin_router.router, prefix="/api/v1")
 app.include_router(authorizations.router, prefix="/api/v1")
 app.include_router(documents.router, prefix="/api/v1")
 app.include_router(users.router, prefix="/api/v1")
+app.include_router(waylo.router, prefix="/api/v1")

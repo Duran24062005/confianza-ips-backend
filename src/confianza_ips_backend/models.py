@@ -7,6 +7,7 @@ from sqlalchemy import (
     Date,
     DateTime,
     ForeignKey,
+    Index,
     Integer,
     String,
     Text,
@@ -252,3 +253,17 @@ class User(Base):
     active: Mapped[bool] = mapped_column(Boolean, default=True)
     session_version: Mapped[int] = mapped_column(Integer, default=1)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+
+
+class WayloAuthAttempt(Base):
+    __tablename__ = "waylo_auth_attempts"
+    __table_args__ = (
+        Index("ix_waylo_auth_attempts_email_time", "email_fingerprint", "attempted_at"),
+        Index("ix_waylo_auth_attempts_ip_time", "ip_fingerprint", "attempted_at"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    email_fingerprint: Mapped[str] = mapped_column(String(64))
+    ip_fingerprint: Mapped[str] = mapped_column(String(64))
+    attempted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    succeeded: Mapped[bool] = mapped_column(Boolean, default=False)

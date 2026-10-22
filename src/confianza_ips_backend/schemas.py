@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from datetime import date, datetime, time
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
@@ -20,6 +22,26 @@ class TokenResponse(BaseModel):
     expires_in: int
 
 
+class WayloCodeResponse(BaseModel):
+    code: str = Field(pattern=r"^\d{6}$")
+    expires_at: datetime
+    interval_seconds: int
+
+
+class WayloTokenRequest(BaseModel):
+    full_name: str = Field(min_length=2, max_length=160)
+    email: EmailStr
+    code: str = Field(pattern=r"^\d{6}$")
+
+    @field_validator("full_name")
+    @classmethod
+    def normalize_name(cls, value: str) -> str:
+        normalized = " ".join(value.split())
+        if len(normalized) < 2:
+            raise ValueError("El nombre debe tener al menos 2 caracteres")
+        return normalized
+
+
 class UserResponse(APIModel):
     id: int
     email: EmailStr
@@ -28,6 +50,16 @@ class UserResponse(APIModel):
     active: bool
     patient_id: int | None = None
     doctor_id: int | None = None
+
+
+class WayloProfileResponse(BaseModel):
+    user: UserResponse
+    patient: PatientResponse
+
+
+class WayloTokenResponse(TokenResponse):
+    user: UserResponse
+    patient: PatientResponse
 
 
 class UserCreate(BaseModel):
@@ -256,6 +288,10 @@ class DocumentResponse(APIModel):
     title: str
     content: str
     created_at: datetime
+
+
+WayloProfileResponse.model_rebuild()
+WayloTokenResponse.model_rebuild()
 
 
 class AuditResponse(APIModel):
