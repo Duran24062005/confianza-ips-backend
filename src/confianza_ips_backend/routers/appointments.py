@@ -1,6 +1,6 @@
 from datetime import date, datetime, time, timedelta, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -34,7 +34,7 @@ from ..schemas import (
     AppointmentResponse,
     AppointmentStatusChange,
 )
-from ..security import CurrentUser, require_roles
+from ..security import CurrentUser, auth_metadata, require_roles
 
 router = APIRouter(prefix="/appointments", tags=["Citas"])
 staff = require_roles(Role.ADMIN, Role.RECEPTIONIST)
@@ -110,7 +110,10 @@ def list_appointments(
 
 @router.post("", response_model=AppointmentResponse, status_code=status.HTTP_201_CREATED)
 def create_appointment(
-    payload: AppointmentCreate, user: CurrentUser, db: Session = Depends(get_db)
+    payload: AppointmentCreate,
+    user: CurrentUser,
+    request: Request,
+    db: Session = Depends(get_db),
 ) -> Appointment:
     patient_id = user.patient_id if user.role == Role.PATIENT else payload.patient_id
     if not patient_id:
@@ -149,6 +152,7 @@ def create_appointment(
             "appointment",
             appointment.id,
             after={"status": appointment.status.value, "starts_at": starts_at},
+            metadata=auth_metadata(request),
         )
         db.commit()
     except IntegrityError as exc:
@@ -175,6 +179,7 @@ def change_status(
     appointment_id: int,
     payload: AppointmentStatusChange,
     user: CurrentUser,
+    request: Request,
     db: Session = Depends(get_db),
 ) -> Appointment:
     appointment = get_appointment_or_404(db, appointment_id)
@@ -218,6 +223,7 @@ def change_status(
         appointment.id,
         before={"status": before},
         after={"status": payload.status.value},
+        metadata=auth_metadata(request),
     )
     db.commit()
     db.refresh(appointment)
@@ -229,6 +235,7 @@ def reschedule(
     appointment_id: int,
     payload: AppointmentReschedule,
     user: CurrentUser,
+    request: Request,
     db: Session = Depends(get_db),
 ) -> Appointment:
     appointment = get_appointment_or_404(db, appointment_id)
@@ -264,6 +271,7 @@ def reschedule(
         appointment.id,
         before=before,
         after={"starts_at": starts_at, "ends_at": ends_at},
+        metadata=auth_metadata(request),
     )
     db.commit()
     db.refresh(appointment)

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
@@ -6,7 +6,7 @@ from ..audit import record_audit
 from ..db import get_db
 from ..models import Appointment, Patient, Role, User
 from ..schemas import PatientCreate, PatientResponse, PatientUpdate
-from ..security import CurrentUser, require_roles
+from ..security import CurrentUser, auth_metadata, require_roles
 
 router = APIRouter(prefix="/patients", tags=["Pacientes"])
 staff = require_roles(Role.ADMIN, Role.RECEPTIONIST)
@@ -94,7 +94,10 @@ def get_my_patient(user: CurrentUser, db: Session = Depends(get_db)) -> Patient:
 
 @router.patch("/me", response_model=PatientResponse)
 def update_my_patient(
-    payload: PatientUpdate, user: CurrentUser, db: Session = Depends(get_db)
+    payload: PatientUpdate,
+    user: CurrentUser,
+    request: Request,
+    db: Session = Depends(get_db),
 ) -> Patient:
     if user.role != Role.PATIENT or not user.patient_id:
         raise HTTPException(status_code=403, detail="El usuario no es un paciente")
@@ -105,7 +108,14 @@ def update_my_patient(
     for field, value in payload.model_dump().items():
         setattr(patient, field, value)
     record_audit(
-        db, user, "update", "patient", patient.id, before=before, after=payload.model_dump()
+        db,
+        user,
+        "update",
+        "patient",
+        patient.id,
+        before=before,
+        after=payload.model_dump(),
+        metadata=auth_metadata(request),
     )
     db.commit()
     db.refresh(patient)

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -12,7 +12,7 @@ from ..models import (
     Role,
 )
 from ..schemas import ClinicalEncounterCreate, ClinicalEncounterResponse, ClinicalNoteResponse
-from ..security import CurrentUser
+from ..security import CurrentUser, auth_metadata
 
 router = APIRouter(prefix="/clinical", tags=["Historia clínica simulada"])
 
@@ -22,6 +22,7 @@ def create_encounter(
     appointment_id: int,
     payload: ClinicalEncounterCreate,
     user: CurrentUser,
+    request: Request,
     db: Session = Depends(get_db),
 ) -> ClinicalEncounter:
     if user.role != Role.DOCTOR:
@@ -50,7 +51,15 @@ def create_encounter(
         created_by_user_id=user.id,
     )
     db.add(note)
-    record_audit(db, user, "create", "clinical_encounter", encounter.id, after=payload.model_dump())
+    record_audit(
+        db,
+        user,
+        "create",
+        "clinical_encounter",
+        encounter.id,
+        after=payload.model_dump(),
+        metadata=auth_metadata(request),
+    )
     db.commit()
     db.refresh(encounter)
     return encounter

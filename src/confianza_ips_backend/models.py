@@ -13,6 +13,7 @@ from sqlalchemy import (
     Text,
     Time,
     UniqueConstraint,
+    text,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -255,15 +256,41 @@ class User(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
 
 
-class WayloAuthAttempt(Base):
-    __tablename__ = "waylo_auth_attempts"
+class AgentActivationCode(Base):
+    __tablename__ = "agent_activation_codes"
     __table_args__ = (
-        Index("ix_waylo_auth_attempts_email_time", "email_fingerprint", "attempted_at"),
-        Index("ix_waylo_auth_attempts_ip_time", "ip_fingerprint", "attempted_at"),
+        Index("ix_agent_activation_patient_expiry", "patient_id", "expires_at"),
+        Index(
+            "uq_agent_activation_active_patient",
+            "patient_id",
+            unique=True,
+            postgresql_where=text("consumed_at IS NULL AND revoked_at IS NULL"),
+            sqlite_where=text("consumed_at IS NULL AND revoked_at IS NULL"),
+        ),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    email_fingerprint: Mapped[str] = mapped_column(String(64))
+    patient_id: Mapped[int] = mapped_column(ForeignKey("patients.id"))
+    code_digest: Mapped[str] = mapped_column(String(64))
+    issued_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    consumed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    issued_by_user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
+
+
+class AgentAuthAttempt(Base):
+    __tablename__ = "agent_auth_attempts"
+    __table_args__ = (
+        Index("ix_agent_auth_attempts_document_time", "document_fingerprint", "attempted_at"),
+        Index("ix_agent_auth_attempts_ip_time", "ip_fingerprint", "attempted_at"),
+        Index("ix_agent_auth_attempts_client_time", "client_fingerprint", "attempted_at"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    document_fingerprint: Mapped[str] = mapped_column(String(64))
+    eps_fingerprint: Mapped[str] = mapped_column(String(64))
     ip_fingerprint: Mapped[str] = mapped_column(String(64))
+    client_fingerprint: Mapped[str] = mapped_column(String(64))
     attempted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
     succeeded: Mapped[bool] = mapped_column(Boolean, default=False)

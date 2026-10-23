@@ -22,24 +22,23 @@ class TokenResponse(BaseModel):
     expires_in: int
 
 
-class WayloCodeResponse(BaseModel):
+class AgentActivationCodeResponse(BaseModel):
     code: str = Field(pattern=r"^\d{6}$")
     expires_at: datetime
-    interval_seconds: int
+    expires_in: int
+    single_use: bool = True
 
 
-class WayloTokenRequest(BaseModel):
-    full_name: str = Field(min_length=2, max_length=160)
-    email: EmailStr
-    code: str = Field(pattern=r"^\d{6}$")
+class AgentTokenRequest(BaseModel):
+    document_type: str = Field(min_length=2, max_length=20)
+    document_number: str = Field(min_length=3, max_length=40)
+    eps: str = Field(min_length=2, max_length=120)
+    activation_code: str = Field(pattern=r"^\d{6}$")
 
-    @field_validator("full_name")
+    @field_validator("document_type", "document_number", "eps")
     @classmethod
-    def normalize_name(cls, value: str) -> str:
-        normalized = " ".join(value.split())
-        if len(normalized) < 2:
-            raise ValueError("El nombre debe tener al menos 2 caracteres")
-        return normalized
+    def normalize_identity_field(cls, value: str) -> str:
+        return " ".join(value.split())
 
 
 class UserResponse(APIModel):
@@ -52,14 +51,15 @@ class UserResponse(APIModel):
     doctor_id: int | None = None
 
 
-class WayloProfileResponse(BaseModel):
-    user: UserResponse
-    patient: PatientResponse
+class AgentIdentityResponse(BaseModel):
+    user_id: int
+    patient_id: int
+    full_name: str
+    eps: str
 
 
-class WayloTokenResponse(TokenResponse):
-    user: UserResponse
-    patient: PatientResponse
+class AgentTokenResponse(TokenResponse):
+    identity: AgentIdentityResponse
 
 
 class UserCreate(BaseModel):
@@ -288,10 +288,6 @@ class DocumentResponse(APIModel):
     title: str
     content: str
     created_at: datetime
-
-
-WayloProfileResponse.model_rebuild()
-WayloTokenResponse.model_rebuild()
 
 
 class AuditResponse(APIModel):

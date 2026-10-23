@@ -1,13 +1,13 @@
 from html import escape
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
 from ..audit import record_audit
 from ..db import get_db
 from ..models import Appointment, Document, Patient, Role
 from ..schemas import DocumentResponse
-from ..security import CurrentUser
+from ..security import CurrentUser, auth_metadata
 
 router = APIRouter(prefix="/documents", tags=["Documentos ficticios"])
 
@@ -18,7 +18,10 @@ router = APIRouter(prefix="/documents", tags=["Documentos ficticios"])
     status_code=status.HTTP_201_CREATED,
 )
 def create_appointment_confirmation(
-    appointment_id: int, user: CurrentUser, db: Session = Depends(get_db)
+    appointment_id: int,
+    user: CurrentUser,
+    request: Request,
+    db: Session = Depends(get_db),
 ) -> Document:
     appointment = db.get(Appointment, appointment_id)
     if not appointment:
@@ -46,7 +49,13 @@ def create_appointment_confirmation(
     db.add(document)
     db.flush()
     record_audit(
-        db, user, "create", "document", document.id, after={"appointment_id": appointment.id}
+        db,
+        user,
+        "create",
+        "document",
+        document.id,
+        after={"appointment_id": appointment.id},
+        metadata=auth_metadata(request),
     )
     db.commit()
     db.refresh(document)
