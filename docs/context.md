@@ -8,7 +8,7 @@ Construiremos una aplicación institucional autónoma para una IPS ficticia colo
 - Frontend React + Vite + TypeScript.
 - Dos repositorios Git independientes y dos proyectos Vercel.
 - Persistencia real, autenticación, roles, auditoría y reglas de negocio.
-- Sin integración especial con Waylo, scraping, Playwright interno ni endpoints bypass.
+- Sin scraping, Playwright interno ni endpoints bypass; el agente usa el contrato REST autenticado y auditado.
 
 Estado actual inspeccionado:
 
@@ -235,7 +235,7 @@ La creación y reprogramación se ejecutarán dentro de transacciones. Si dos so
 
 ### Expansiones futuras
 
-- Integración con Waylo.
+- Activación segura del agente y acceso paciente-scoped.
 - Notificaciones por correo o SMS.
 - Firma digital.
 - Carga de archivos clínicos.

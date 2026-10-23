@@ -14,22 +14,25 @@ Las migraciones son obligatorias antes del primer login. Si la base no está dis
 
 La documentación interactiva está disponible en `/docs` mientras `APP_ENV` no sea `production`.
 
-## Integración Waylo
+## Activación del agente
 
-Waylo puede consultar el perfil administrativo y las citas de un paciente mediante los endpoints dedicados bajo `/api/v1/integrations/waylo`. El intercambio recibe `full_name`, `email` y `code`; `email` es el único campo de correo del contrato. El token emitido dura 15 minutos y no habilita escritura, historia clínica ni recursos globales.
+Un paciente activo puede generar desde su dashboard una clave de activación individual, de un solo uso y válida durante cinco minutos. El agente intercambia esa clave junto con el tipo y número de documento, la EPS y su API key mediante `/api/v1/integrations/agent/token`.
+
+El token emitido dura 15 minutos y conserva el alcance del rol paciente: perfil propio, citas, cancelaciones y reprogramaciones permitidas, historia propia, documentos autorizados, métricas propias, catálogos y disponibilidad. No permite administración, listados globales, auditoría ni datos de otros pacientes.
 
 Configura en el backend los secretos independientes de la integración:
 
 ```text
-WAYLO_TOTP_SECRET=<secreto-base32>
-WAYLO_TOTP_INTERVAL_SECONDS=60
-WAYLO_JWT_SECRET=<secreto-largo-independiente>
-WAYLO_TOKEN_EXPIRE_MINUTES=15
+AGENT_API_KEY=<clave-privada-del-agente>
+AGENT_ACTIVATION_SECRET=<secreto-largo-para-digests>
+AGENT_ACTIVATION_EXPIRE_SECONDS=300
+AGENT_JWT_SECRET=<secreto-largo-independiente>
+AGENT_TOKEN_EXPIRE_MINUTES=15
 ```
 
-Después de aplicar las migraciones, un administrador puede consultar el código vigente en `/app/integraciones/waylo` del frontend. El código cambia cada 60 segundos y la interfaz muestra su vencimiento; nunca se expone el secreto TOTP.
+Después de aplicar las migraciones, el paciente genera la clave desde `/app/resumen` del frontend. El código nunca se almacena en claro ni se devuelve después de su emisión. La API key solo se configura en el servidor del agente y nunca en el navegador.
 
-La especificación completa, incluyendo permisos, límites, errores y rotación de secretos, está en [`docs/003-waylo-agent-api-integration.md`](docs/003-waylo-agent-api-integration.md).
+La especificación completa, incluyendo permisos, consumo único, límites, errores y rotación de secretos, está en [`docs/003-agent-activation-and-access.md`](docs/003-agent-activation-and-access.md).
 
 ## Integración continua
 

@@ -20,6 +20,10 @@ El MVP incluye autenticación JWT, roles, catálogos, pacientes, agendas, citas,
 
 Todos los datos son sintéticos. Las contraseñas se almacenan con Argon2id. El backend valida rol y pertenencia del recurso; el frontend nunca sustituye esas validaciones.
 
+## Integración del agente
+
+La activación segura del agente y el acceso paciente-scoped se especifican en [`docs/003-agent-activation-and-access.md`](003-agent-activation-and-access.md). El agente no sustituye la autorización del backend: el JWT temporal se valida junto con el rol, el paciente vinculado y las reglas de cada operación.
+
 ## Riesgos
 
 La misma base Neon se utilizará para desarrollo y demostración por decisión del proyecto. El seed es idempotente y las pruebas destructivas deben ejecutarse contra una base o esquema aislado.
