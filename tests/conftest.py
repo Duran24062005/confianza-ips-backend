@@ -4,8 +4,9 @@ from zoneinfo import ZoneInfo
 
 os.environ.setdefault("DATABASE_URL", "sqlite:///./test-suite.db")
 os.environ.setdefault("JWT_SECRET", "test-secret-with-at-least-32-characters")
-os.environ.setdefault("WAYLO_TOTP_SECRET", "JBSWY3DPEHPK3PXP")
-os.environ.setdefault("WAYLO_JWT_SECRET", "test-waylo-secret-with-at-least-32-characters")
+os.environ.setdefault("AGENT_API_KEY", "test-agent-api-key")
+os.environ.setdefault("AGENT_ACTIVATION_SECRET", "test-agent-activation-secret")
+os.environ.setdefault("AGENT_JWT_SECRET", "test-agent-secret-with-at-least-32-characters")
 os.environ.setdefault("CORS_ORIGINS", "http://localhost:5173")
 os.environ.setdefault("APP_ENV", "test")
 
