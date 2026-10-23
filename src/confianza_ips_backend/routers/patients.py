@@ -104,6 +104,11 @@ def update_my_patient(
     patient = db.get(Patient, user.patient_id)
     if not patient or not patient.active:
         raise HTTPException(status_code=404, detail="Paciente no encontrado")
+    if payload.eps != patient.eps:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="La afiliación EPS solo puede ser actualizada por personal autorizado",
+        )
     before = {field: getattr(patient, field) for field in payload.model_fields}
     for field, value in payload.model_dump().items():
         setattr(patient, field, value)
