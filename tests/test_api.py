@@ -82,6 +82,45 @@ def test_patient_can_only_read_own_profile(client):
     assert other.status_code == 403
 
 
+def test_patient_cannot_change_own_eps(client):
+    headers = login(client, "patient@confianza.demo")
+    profile = client.get("/api/v1/patients/me", headers=headers).json()
+    profile["eps"] = "Otra EPS"
+
+    response = client.patch("/api/v1/patients/me", json=profile, headers=headers)
+
+    assert response.status_code == 403
+    assert response.json()["detail"] == (
+        "La afiliación EPS solo puede ser actualizada por personal autorizado"
+    )
+    current_profile = client.get("/api/v1/patients/me", headers=headers).json()
+    assert current_profile["eps"] == "EPS Test"
+
+
+def test_patient_can_update_contact_data_without_changing_eps(client):
+    headers = login(client, "patient@confianza.demo")
+    profile = client.get("/api/v1/patients/me", headers=headers).json()
+    profile["phone"] = "3111111111"
+
+    response = client.patch("/api/v1/patients/me", json=profile, headers=headers)
+
+    assert response.status_code == 200, response.text
+    assert response.json()["phone"] == "3111111111"
+    assert response.json()["eps"] == "EPS Test"
+
+
+def test_admin_can_update_patient_eps(client):
+    headers = login(client, "admin@confianza.demo")
+    patient_id = client.test_ids["patient"]
+    profile = client.get("/api/v1/patients/me", headers=login(client, "patient@confianza.demo")).json()
+    profile["eps"] = "EPS Actualizada"
+
+    response = client.put(f"/api/v1/patients/{patient_id}", json=profile, headers=headers)
+
+    assert response.status_code == 200, response.text
+    assert response.json()["eps"] == "EPS Actualizada"
+
+
 def test_admin_can_deactivate_patient_and_audit_it(client):
     headers = login(client, "admin@confianza.demo")
     patient_id = client.test_ids["patient"]
