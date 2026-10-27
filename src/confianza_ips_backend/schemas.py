@@ -98,6 +98,12 @@ class PatientCreate(BaseModel):
     emergency_phone: str = Field(min_length=7, max_length=40)
 
 
+class PatientRegistrationRequest(PatientCreate):
+    """Public demo registration. The server always assigns the patient role."""
+
+    password: str = Field(min_length=8)
+
+
 class PatientUpdate(PatientCreate):
     pass
 
