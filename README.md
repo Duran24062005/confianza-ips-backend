@@ -59,6 +59,11 @@ El seed crea cuentas ficticias con la contraseña `Confianza123!`:
 
 No utilizar estos datos en un entorno con información real.
 
+También existe `POST /api/v1/auth/register` para crear un paciente ficticio y su cuenta
+de rol `patient` durante la demostración. No acepta roles institucionales ni reemplaza
+un proceso real de admisión; el contrato y sus límites están en
+[`docs/007-public-patient-registration.md`](docs/007-public-patient-registration.md).
+
 El seed es idempotente y crea una línea de tiempo sintética con citas solicitadas, confirmadas, completadas, canceladas y no asistidas. Las fechas se calculan alrededor del día de ejecución para que el dashboard de 7, 30 y 90 días tenga datos demostrables. Los registros existentes no se eliminan.
 
 ## Contrato
