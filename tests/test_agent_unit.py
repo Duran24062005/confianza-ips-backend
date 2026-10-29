@@ -17,6 +17,7 @@ from confianza_ips_backend.application.services.agent import (
     normalize_identity,
     verify_activation_code,
 )
+from confianza_ips_backend.config import Settings
 from confianza_ips_backend.db import Base
 from confianza_ips_backend.models import AgentAuthAttempt, Patient, Role
 from confianza_ips_backend.routers import agent
@@ -24,6 +25,14 @@ from confianza_ips_backend.schemas import AgentTokenRequest
 
 AGENT_SECRET = "unit-agent-activation-secret"
 AGENT_JWT_SECRET = "unit-agent-jwt-secret-with-at-least-32-characters"
+
+
+def test_agent_token_default_is_thirty_days(monkeypatch) -> None:
+    monkeypatch.delenv("AGENT_TOKEN_EXPIRE_MINUTES", raising=False)
+
+    settings = Settings(_env_file=None)
+
+    assert settings.agent_token_expire_minutes == 43_200
 
 
 def test_identity_normalization_is_case_insensitive_and_collapses_whitespace() -> None:
@@ -226,6 +235,8 @@ def test_rate_limit_counts_only_recent_failed_attempts() -> None:
         assert not agent._is_rate_limited(
             db, ((AgentAuthAttempt.document_fingerprint, fingerprint),), now
         )
+
+    engine.dispose()
 
 
 def test_missing_agent_configuration_is_rejected(monkeypatch) -> None:

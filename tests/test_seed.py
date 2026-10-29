@@ -1,10 +1,14 @@
 import importlib.util
-from datetime import date
+from datetime import date, time
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
+from sqlalchemy import create_engine, select
+from sqlalchemy.orm import Session
+
+from confianza_ips_backend.db import Base
 from confianza_ips_backend.domain.types import AppointmentStatus
-from confianza_ips_backend.models import Doctor, Patient, Service
+from confianza_ips_backend.models import Doctor, DoctorSchedule, Patient, Service
 
 BUSINESS_TZ = ZoneInfo("America/Bogota")
 
@@ -15,6 +19,7 @@ assert seed_spec and seed_spec.loader
 seed_module = importlib.util.module_from_spec(seed_spec)
 seed_spec.loader.exec_module(seed_module)
 demo_appointment_specs = seed_module.demo_appointment_specs
+ensure_demo_schedules = seed_module.ensure_demo_schedules
 
 
 def test_demo_seed_covers_all_appointment_states_in_the_analytics_period() -> None:
@@ -90,3 +95,44 @@ def test_demo_seed_covers_all_appointment_states_in_the_analytics_period() -> No
     }
     assert min(offsets) >= -30
     assert max(offsets) <= 90
+
+
+def test_demo_schedule_seed_is_complete_and_idempotent() -> None:
+    engine = create_engine("sqlite://")
+    Base.metadata.create_all(engine)
+    try:
+        with Session(engine) as db:
+            doctor = Doctor(
+                license_number="SEED-1",
+                first_name="Demo",
+                last_name="Doctor",
+                email="seed@confianza.demo",
+                phone="3000000",
+            )
+            db.add(doctor)
+            db.flush()
+
+            db.add(
+                DoctorSchedule(
+                    doctor_id=doctor.id,
+                    weekday=0,
+                    start_time=time(8),
+                    end_time=time(16),
+                )
+            )
+            db.flush()
+            ensure_demo_schedules(db, doctor.id)
+            ensure_demo_schedules(db, doctor.id)
+            db.commit()
+
+            schedules = db.scalars(
+                select(DoctorSchedule).where(DoctorSchedule.doctor_id == doctor.id)
+            ).all()
+            assert len(schedules) == 7
+            assert {schedule.weekday for schedule in schedules} == set(range(7))
+            assert {
+                (schedule.start_time.hour, schedule.end_time.hour) for schedule in schedules
+            } == {(8, 16)}
+    finally:
+        Base.metadata.drop_all(engine)
+        engine.dispose()

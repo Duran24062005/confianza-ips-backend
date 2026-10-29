@@ -65,7 +65,7 @@ Respuesta exitosa:
 {
   "access_token": "jwt-ficticio",
   "token_type": "bearer",
-  "expires_in": 900,
+  "expires_in": 2592000,
   "identity": {
     "user_id": 2,
     "patient_id": 1,
@@ -75,7 +75,7 @@ Respuesta exitosa:
 }
 ```
 
-El JWT usa una clave distinta a la autenticación interna y contiene `typ=agent`, `aud=agent`, `scope=agent:patient`, `sub` y `session_version`. No existe refresh token.
+El JWT usa una clave distinta a la autenticación interna y contiene `typ=agent`, `aud=agent`, `scope=agent:patient`, `sub` y `session_version`. No existe refresh token. La duración se controla con `AGENT_TOKEN_EXPIRE_MINUTES` y es de 30 días por defecto (`43200` minutos); el código de activación conserva su duración corta de cinco minutos. Los tokens existentes no cambian al modificar la variable: hay que volver a vincular la cuenta para emitir uno nuevo.
 
 ## Reglas de seguridad
 

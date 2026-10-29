@@ -5,6 +5,7 @@ from datetime import UTC, date, datetime, time, timedelta
 from zoneinfo import ZoneInfo
 
 from sqlalchemy import select
+from sqlalchemy.orm import Session
 
 from confianza_ips_backend.db import Base, SessionLocal, engine
 from confianza_ips_backend.models import (
@@ -29,6 +30,30 @@ from confianza_ips_backend.security import hash_password
 
 DEMO_PASSWORD = "Confianza123!"
 BUSINESS_TZ = ZoneInfo("America/Bogota")
+DEMO_SCHEDULE_WEEKDAYS = range(7)
+
+
+def ensure_demo_schedules(db: Session, doctor_id: int) -> None:
+    """Ensure a demo doctor has an active 08:00-16:00 schedule every day."""
+
+    existing_weekdays = set(
+        db.scalars(
+            select(DoctorSchedule.weekday).where(
+                DoctorSchedule.doctor_id == doctor_id,
+                DoctorSchedule.active.is_(True),
+            )
+        ).all()
+    )
+    for weekday in DEMO_SCHEDULE_WEEKDAYS:
+        if weekday not in existing_weekdays:
+            db.add(
+                DoctorSchedule(
+                    doctor_id=doctor_id,
+                    weekday=weekday,
+                    start_time=time(8),
+                    end_time=time(16),
+                )
+            )
 
 
 def demo_appointment_specs(
@@ -194,17 +219,7 @@ def seed(create_schema: bool = False) -> None:
                 )
             ):
                 db.add(DoctorService(doctor_id=doctor.id, service_id=services[service_name].id))
-            if not db.scalar(select(DoctorSchedule).where(DoctorSchedule.doctor_id == doctor.id)):
-                db.add(
-                    DoctorSchedule(
-                        doctor_id=doctor.id, weekday=0, start_time=time(8), end_time=time(16)
-                    )
-                )
-                db.add(
-                    DoctorSchedule(
-                        doctor_id=doctor.id, weekday=2, start_time=time(8), end_time=time(16)
-                    )
-                )
+            ensure_demo_schedules(db, doctor.id)
             doctors.append(doctor)
 
         patients = []
@@ -309,7 +324,10 @@ def seed(create_schema: bool = False) -> None:
                         )
                     )
         db.commit()
-        print(f"Seed completado con {len(demo_appointments)} escenarios de citas.")
+        print(
+            f"Seed completado con {len(demo_appointments)} escenarios de citas "
+            "y agendas demo de lunes a domingo, 08:00-16:00."
+        )
         print(f"Todas las cuentas demo usan la contraseña: {DEMO_PASSWORD}")
     finally:
         db.close()

@@ -41,6 +41,9 @@ entrypoint = "src.confianza_ips_backend.main:app"
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-ra"
+markers = [
+    "integration: exercises the FastAPI application with a database-backed client fixture",
+]
 
 [tool.ruff]
 line-length = 100

@@ -7,6 +7,7 @@ os.environ.setdefault("JWT_SECRET", "test-secret-with-at-least-32-characters")
 os.environ.setdefault("AGENT_API_KEY", "test-agent-api-key")
 os.environ.setdefault("AGENT_ACTIVATION_SECRET", "test-agent-activation-secret")
 os.environ.setdefault("AGENT_JWT_SECRET", "test-agent-secret-with-at-least-32-characters")
+os.environ.setdefault("AGENT_TOKEN_EXPIRE_MINUTES", "43200")
 os.environ.setdefault("CORS_ORIGINS", "http://localhost:5173")
 os.environ.setdefault("APP_ENV", "test")
 

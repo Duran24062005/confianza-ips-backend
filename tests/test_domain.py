@@ -4,6 +4,7 @@ from confianza_ips_backend.domain.appointment_policy import (
     ACTIVE_APPOINTMENT_STATUSES,
     can_access_appointment,
     can_transition,
+    is_closed,
     is_patient_within_cutoff,
 )
 from confianza_ips_backend.domain.types import AppointmentStatus, Role
@@ -29,3 +30,22 @@ def test_patient_cancellation_cutoff_is_calculated_from_utc() -> None:
 
     assert is_patient_within_cutoff(now + timedelta(hours=23), now)
     assert not is_patient_within_cutoff(now + timedelta(hours=25), now)
+
+
+def test_cutoff_boundary_and_status_helpers_are_explicit() -> None:
+    now = datetime(2026, 10, 29, 15, tzinfo=timezone.utc)
+
+    assert is_patient_within_cutoff(now + timedelta(hours=24), now) is False
+    assert is_patient_within_cutoff(now + timedelta(hours=23, minutes=59), now) is True
+    assert is_closed(AppointmentStatus.COMPLETED)
+    assert is_closed("no_show")
+    assert not is_closed(AppointmentStatus.CONFIRMED)
+
+
+def test_appointment_access_is_role_and_identity_scoped() -> None:
+    assert can_access_appointment(Role.ADMIN, None, None, 1, 2)
+    assert can_access_appointment(Role.RECEPTIONIST, None, None, 1, 2)
+    assert can_access_appointment(Role.PATIENT, 1, None, 1, 2)
+    assert not can_access_appointment(Role.PATIENT, 2, None, 1, 2)
+    assert can_access_appointment(Role.DOCTOR, None, 2, 1, 2)
+    assert not can_access_appointment(Role.DOCTOR, None, 3, 1, 2)
