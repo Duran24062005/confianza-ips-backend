@@ -1,6 +1,6 @@
 import jwt
 import pytest
-from conftest import future_schedule_start, login
+from conftest import BUSINESS_TZ, future_schedule_start, login
 
 from confianza_ips_backend.config import get_settings
 
@@ -106,6 +106,7 @@ def test_agent_token_has_patient_scope_and_uses_internal_patient_routes(client):
     assert payload["aud"] == "agent"
     assert payload["scope"] == "agent:patient"
     assert payload["typ"] == "agent"
+    assert issued["expires_in"] == 30 * 24 * 60 * 60
     assert issued["identity"] == {
         "user_id": 2,
         "patient_id": 1,
@@ -122,9 +123,17 @@ def test_agent_token_has_patient_scope_and_uses_internal_patient_routes(client):
     assert client.get("/api/v1/audit", headers=headers).status_code == 403
 
 
-def test_agent_can_create_and_cancel_own_appointment(client):
+def test_agent_can_find_create_reschedule_and_cancel_own_appointment(client):
     issued = issue_agent_token(client)
     headers = {"Authorization": f"Bearer {issued['access_token']}"}
+    starts_at = future_schedule_start(3)
+    availability = client.get(
+        f"/api/v1/availability?doctor_id=1&service_id=1&date={starts_at.astimezone(BUSINESS_TZ).date().isoformat()}",
+        headers=headers,
+    )
+    assert availability.status_code == 200, availability.text
+    assert availability.json()
+
     created = client.post(
         "/api/v1/appointments",
         json={
@@ -132,7 +141,7 @@ def test_agent_can_create_and_cancel_own_appointment(client):
             "doctor_id": 1,
             "service_id": 1,
             "site_id": 1,
-            "starts_at": future_schedule_start(3).isoformat(),
+            "starts_at": starts_at.isoformat(),
             "reason": "Solicitud desde el agente",
         },
         headers=headers,
@@ -140,8 +149,19 @@ def test_agent_can_create_and_cancel_own_appointment(client):
     assert created.status_code == 201, created.text
     assert created.json()["patient_id"] == 1
 
+    rescheduled = client.post(
+        f"/api/v1/appointments/{created.json()['id']}/reschedule",
+        json={
+            "starts_at": future_schedule_start(6).isoformat(),
+            "reason": "Cambio de horario desde el agente",
+        },
+        headers=headers,
+    )
+    assert rescheduled.status_code == 200, rescheduled.text
+    assert rescheduled.json()["starts_at"] != starts_at.isoformat()
+
     cancelled = client.post(
-        f"/api/v1/appointments/{created.json()['id']}/status",
+        f"/api/v1/appointments/{rescheduled.json()['id']}/status",
         json={"status": "cancelled", "reason": "Cancelación desde el agente"},
         headers=headers,
     )

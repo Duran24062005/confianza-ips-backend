@@ -13,7 +13,10 @@ class Settings(BaseSettings):
     agent_activation_secret: str = ""
     agent_activation_expire_seconds: int = Field(default=300, ge=60, le=3600)
     agent_jwt_secret: str = ""
-    agent_token_expire_minutes: int = Field(default=15, ge=5, le=1440)
+    # The agent token is revocable through the patient's active/session state.
+    # Keep the activation code short-lived, but allow a month-long token for
+    # the Waylo <-> Confianza test flow without hard-coding a secret.
+    agent_token_expire_minutes: int = Field(default=43_200, ge=5, le=129_600)
     cors_origins: str = "http://localhost:5173"
     app_env: str = "development"
     log_level: str = "INFO"
