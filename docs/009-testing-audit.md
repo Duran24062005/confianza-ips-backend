@@ -21,6 +21,8 @@ de citas, límites de cancelación y serialización de auditoría.
 ## Evidencia local
 
 - `python -m pytest -q -m 'not integration'`: 37 aprobadas, 25 deseleccionadas.
+- `python -m pytest -q -m 'not integration' --cov=src/confianza_ips_backend`:
+  68% de cobertura en el grupo unitario.
 - `python -m compileall -q src tests`: correcto.
 - `ruff check src tests`: correcto después de ordenar imports.
 - Las pruebas unitarias se ejecutan sin red ni base externa.
@@ -35,5 +37,7 @@ fixture SQLite antes de considerar validado el recorrido HTTP completo.
 La suite no debe confundirse con una prueba de despliegue: aún requiere una
 validación separada de PostgreSQL, migraciones, CORS, Vercel y la integración
 server-to-server con Waylo. Como siguiente paso conviene generar cobertura de
-routers y mantener el grupo `integration` como job separado para que un
-bloqueo de entorno no oculte los resultados unitarios.
+routers —el grupo unitario deja los routers de citas, pacientes, agenda clínica
+y documentos por debajo de la cobertura deseable— y mantener el grupo
+`integration` como job separado para que un bloqueo de entorno no oculte los
+resultados unitarios.

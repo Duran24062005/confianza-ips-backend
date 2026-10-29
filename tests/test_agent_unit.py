@@ -227,6 +227,8 @@ def test_rate_limit_counts_only_recent_failed_attempts() -> None:
             db, ((AgentAuthAttempt.document_fingerprint, fingerprint),), now
         )
 
+    engine.dispose()
+
 
 def test_missing_agent_configuration_is_rejected(monkeypatch) -> None:
     monkeypatch.setattr(

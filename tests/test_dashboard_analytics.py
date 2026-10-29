@@ -72,3 +72,5 @@ def test_dashboard_analytics_aggregates_statuses_services_and_role_scope() -> No
     assert doctor_data.summary.active_patients is None
     assert patient_data.scope == "patient"
     assert patient_data.summary.active_doctors is None
+
+    engine.dispose()
