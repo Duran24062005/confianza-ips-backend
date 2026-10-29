@@ -18,7 +18,7 @@ La documentación interactiva está disponible en `/docs` mientras `APP_ENV` no 
 
 Un paciente activo puede generar desde su dashboard una clave de activación individual, de un solo uso y válida durante cinco minutos. El agente intercambia esa clave junto con el tipo y número de documento, la EPS y su API key mediante `/api/v1/integrations/agent/token`.
 
-El token emitido dura 15 minutos y conserva el alcance del rol paciente: perfil propio, citas, cancelaciones y reprogramaciones permitidas, historia propia, documentos autorizados, métricas propias, catálogos y disponibilidad. No permite administración, listados globales, auditoría ni datos de otros pacientes.
+El token emitido dura 30 días por defecto para que las pruebas de Waylo no se interrumpan por expiraciones frecuentes. Conserva el alcance del rol paciente: perfil propio, citas, cancelaciones y reprogramaciones permitidas, historia propia, documentos autorizados, métricas propias, catálogos y disponibilidad. No permite administración, listados globales, auditoría ni datos de otros pacientes. El token sigue siendo revocable si se desactiva el paciente o cambia su versión de sesión.
 
 Configura en el backend los secretos independientes de la integración:
 
@@ -27,10 +27,10 @@ AGENT_API_KEY=<clave-privada-del-agente>
 AGENT_ACTIVATION_SECRET=<secreto-largo-para-digests>
 AGENT_ACTIVATION_EXPIRE_SECONDS=300
 AGENT_JWT_SECRET=<secreto-largo-independiente>
-AGENT_TOKEN_EXPIRE_MINUTES=15
+AGENT_TOKEN_EXPIRE_MINUTES=43200
 ```
 
-Después de aplicar las migraciones, el paciente genera la clave desde `/app/resumen` del frontend. El código nunca se almacena en claro ni se devuelve después de su emisión. La API key solo se configura en el servidor del agente y nunca en el navegador.
+Después de aplicar las migraciones, el paciente genera la clave desde `/app/resumen` del frontend. El código nunca se almacena en claro ni se devuelve después de su emisión. La API key solo se configura en el servidor del agente y nunca en el navegador. Cambiar esta variable no prolonga tokens ya emitidos: para que Waylo reciba el nuevo plazo hay que volver a vincular la IPS y emitir otro token.
 
 La especificación completa, incluyendo permisos, consumo único, límites, errores y rotación de secretos, está en [`docs/003-agent-activation-and-access.md`](docs/003-agent-activation-and-access.md).
 
@@ -64,7 +64,7 @@ de rol `patient` durante la demostración. No acepta roles institucionales ni re
 un proceso real de admisión; el contrato y sus límites están en
 [`docs/007-public-patient-registration.md`](docs/007-public-patient-registration.md).
 
-El seed es idempotente y crea una línea de tiempo sintética con citas solicitadas, confirmadas, completadas, canceladas y no asistidas. Las fechas se calculan alrededor del día de ejecución para que el dashboard de 7, 30 y 90 días tenga datos demostrables. Los registros existentes no se eliminan.
+El seed es idempotente y crea una línea de tiempo sintética con citas solicitadas, confirmadas, completadas, canceladas y no asistidas. Las fechas se calculan alrededor del día de ejecución para que el dashboard de 7, 30 y 90 días tenga datos demostrables. También garantiza que los médicos demo tengan agenda de lunes a domingo, de 08:00 a 16:00, para que existan cupos de prueba para consulta general y pediátrica. Los registros existentes no se eliminan.
 
 ## Contrato
 
