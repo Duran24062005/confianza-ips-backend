@@ -1,7 +1,10 @@
 import jwt
+import pytest
 from conftest import future_schedule_start, login
 
 from confianza_ips_backend.config import get_settings
+
+pytestmark = pytest.mark.integration
 
 
 def activation_code(client):

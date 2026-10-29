@@ -1,4 +1,8 @@
+import pytest
+
 from confianza_ips_backend.models import Role
+
+pytestmark = pytest.mark.integration
 
 
 def registration_payload() -> dict[str, str]:

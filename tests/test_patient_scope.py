@@ -1,4 +1,7 @@
+import pytest
 from conftest import future_schedule_start, login
+
+pytestmark = pytest.mark.integration
 
 
 def patient_payload(document_number: str) -> dict[str, str]:

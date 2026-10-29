@@ -1,8 +1,11 @@
+import pytest
 from conftest import future_schedule_start, login
 
 from confianza_ips_backend.api.dependencies import get_authentication_service
 from confianza_ips_backend.application.exceptions import DatabaseNotReadyError
 from confianza_ips_backend.main import app
+
+pytestmark = pytest.mark.integration
 
 
 def test_health_and_auth(client):
